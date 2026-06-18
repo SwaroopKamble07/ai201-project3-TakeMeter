@@ -90,25 +90,25 @@ This is emotional (reaction) but also contains a future claim (speculation).
 
 **Source:** Both Reddit posts and comments from r/OnePieceSpoilers, collected using the PRAW Python library (Reddit API). Posts will include title + selftext; comments will be collected from weekly spoiler megathreads and high-engagement theory posts.
 
-**Target distribution:** 50–55 examples per label = ~210 total, to give a small buffer for examples that are too short or off-topic after collection.
+**Target distribution:** 100 examples per label = 400 total, to give the model enough signal per class and a meaningful test set.
 
 | Label | Target count |
 |-------|-------------|
-| grounded_theory | 50–55 |
-| speculation | 50–55 |
-| reaction | 50–55 |
-| observation | 50–55 |
+| grounded_theory | 100 |
+| speculation | 100 |
+| reaction | 100 |
+| observation | 100 |
 
-**Split:** 160 train / 20 validation / 20 test (80/10/10). The test set will be held out completely until final evaluation — no peeking to adjust labels or thresholds.
+**Split:** 320 train / 40 validation / 40 test (80/10/10). The test set will be held out completely until final evaluation — no peeking to adjust labels or thresholds.
 
 **Collection strategy:**
 - Scrape weekly "SPOILERS" megathread comments (reaction and observation labels tend to cluster here)
 - Scrape top posts of all time and past 6 months tagged "Theory" or "Discussion" (grounded_theory and speculation)
 - Filter out deleted comments, comments under 20 words (too short for a text classifier to learn from), and non-English posts
 
-**If a label is underrepresented:** If after 200 examples any label has fewer than 40 examples, go back and scrape specifically for that type — e.g., search for "did anyone notice" or "I just realized" for observation; search pinned "Chapter X Spoilers" posts for reactions. Do not simply downsample other labels; add more examples to the underrepresented one.
+**If a label is underrepresented:** If after annotation any label has fewer than 80 examples, go back and scrape specifically for that type — e.g., search for "did anyone notice" or "I just realized" for observation; search pinned "Chapter X Spoilers" posts for reactions. Do not simply downsample other labels; add more examples to the underrepresented one.
 
-**Pre-annotation read:** Before labeling, read 30–40 examples from the raw scrape to verify labels apply cleanly. If a label is consistently hard to distinguish from another in practice, revisit the decision rule before annotating all 200.
+**Pre-annotation read:** Before labeling, read 30–40 examples from the raw scrape to verify labels apply cleanly. If a label is consistently hard to distinguish from another in practice, revisit the decision rule before annotating all 400.
 
 ---
 
