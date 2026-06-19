@@ -1,6 +1,9 @@
 """
-Scrapes r/OnePieceSpoilers using Reddit's public JSON API — no API key needed.
-Targets ~600-800 raw items for annotation down to 100 per label.
+Scrapes r/OnePieceSpoilers via Arctic Shift (a Reddit archive API).
+No API key or Reddit account needed.
+
+Strategy: Arctic Shift only sorts by date, so we paginate through the whole
+6-month window (newest-first) collecting everything, then sort by score locally.
 
 Usage:
     pip install requests pandas
@@ -14,181 +17,122 @@ import os
 from datetime import datetime, timedelta, timezone
 
 SUBREDDIT  = "OnePieceSpoilers"
-BASE_URL   = f"https://www.reddit.com/r/{SUBREDDIT}"
+BASE       = "https://arctic-shift.photon-reddit.com/api"
 HEADERS    = {"User-Agent": "takemeter-scraper/1.0"}
-CUTOFF_TS  = (datetime.now(timezone.utc) - timedelta(days=180)).timestamp()
+CUTOFF_TS  = int((datetime.now(timezone.utc) - timedelta(days=180)).timestamp())
+NOW_TS     = int(datetime.now(timezone.utc).timestamp())
 MIN_WORDS  = 20
 
-rows: dict[str, dict] = {}   # keyed by id to deduplicate
+rows: dict[str, dict] = {}
 
 
-def get(url: str, params: dict = {}) -> dict | None:
-    """GET with rate-limit backoff."""
-    for attempt in range(3):
+def get(endpoint: str, params: dict) -> list | None:
+    url = f"{BASE}/{endpoint}"
+    for attempt in range(4):
         try:
-            r = requests.get(url, headers=HEADERS, params=params, timeout=15)
+            r = requests.get(url, headers=HEADERS, params=params, timeout=30)
             if r.status_code == 429:
-                wait = int(r.headers.get("Retry-After", 60))
+                wait = int(r.headers.get("Retry-After", 30))
                 print(f"  rate limited — waiting {wait}s")
                 time.sleep(wait)
                 continue
             r.raise_for_status()
-            time.sleep(1.1)   # Reddit public API: ~1 req/sec is safe
-            return r.json()
+            time.sleep(0.8)
+            return r.json().get("data", [])
+        except requests.HTTPError as e:
+            # 400 = bad params; don't bother retrying those
+            if r.status_code == 400:
+                print(f"  bad request (400): {r.text[:200]}")
+                return None
+            print(f"  error: {e}, retrying ({attempt+1}/4)...")
+            time.sleep(5 * (attempt + 1))
         except Exception as e:
-            print(f"  request error ({e}), retrying...")
+            print(f"  error: {e}, retrying ({attempt+1}/4)...")
             time.sleep(5 * (attempt + 1))
     return None
 
 
-def add_post(data: dict):
-    ts = data.get("created_utc", 0)
-    if ts < CUTOFF_TS:
-        return
-
-    selftext = (data.get("selftext") or "").strip()
+def add_post(d: dict):
+    selftext = (d.get("selftext") or "").strip()
     if selftext in ("[deleted]", "[removed]"):
         selftext = ""
-
-    text = data.get("title", "").strip()
+    text = (d.get("title") or "").strip()
     if selftext:
         text = text + "\n\n" + selftext
-
     if len(text.split()) < MIN_WORDS:
         return
-
-    uid = f"post_{data['id']}"
+    uid = f"post_{d['id']}"
     if uid not in rows:
         rows[uid] = {
             "id":          uid,
             "source_type": "post",
             "text":        text,
-            "url":         "https://reddit.com" + data.get("permalink", ""),
-            "created_utc": int(ts),
-            "flair":       data.get("link_flair_text") or "",
-            "score":       data.get("score", 0),
+            "url":         "https://reddit.com" + (d.get("permalink") or ""),
+            "created_utc": int(d.get("created_utc", 0)),
+            "flair":       d.get("link_flair_text") or "",
+            "score":       d.get("score", 0),
             "label":       "",
         }
 
 
-def add_comment(data: dict):
-    ts = data.get("created_utc", 0)
-    if ts < CUTOFF_TS:
-        return
-
-    body = (data.get("body") or "").strip()
+def add_comment(d: dict):
+    body = (d.get("body") or "").strip()
     if body in ("[deleted]", "[removed]", ""):
         return
     if len(body.split()) < MIN_WORDS:
         return
-
-    uid = f"comment_{data['id']}"
+    uid = f"comment_{d['id']}"
     if uid not in rows:
         rows[uid] = {
             "id":          uid,
             "source_type": "comment",
             "text":        body,
-            "url":         "https://reddit.com" + data.get("permalink", ""),
-            "created_utc": int(ts),
+            "url":         "https://reddit.com" + (d.get("permalink") or ""),
+            "created_utc": int(d.get("created_utc", 0)),
             "flair":       "",
-            "score":       data.get("score", 0),
+            "score":       d.get("score", 0),
             "label":       "",
         }
 
 
-def scrape_listing(url: str, params: dict, max_pages: int = 5, label: str = ""):
-    """Paginate through a Reddit listing endpoint."""
-    after = None
+def paginate(endpoint: str, adder, label: str, extra: dict = {}, max_pages: int = 40):
+    """
+    Walk the 6-month window newest-first. Arctic Shift sorts by created_utc,
+    so we move the `before` cursor back each page until we hit the cutoff.
+    """
+    before = NOW_TS
+    start_count = len(rows)
     for page in range(max_pages):
-        p = {**params, "limit": 100}
-        if after:
-            p["after"] = after
-        data = get(url, p)
-        if not data:
+        params = {
+            "subreddit": SUBREDDIT,
+            "after":     CUTOFF_TS,
+            "before":    before,
+            "limit":     100,
+            "sort":      "desc",
+            **extra,
+        }
+        items = get(endpoint, params)
+        if items is None:        # hard error
             break
-        children = data.get("data", {}).get("children", [])
-        if not children:
+        if not items:            # no more data
             break
-        for child in children:
-            add_post(child["data"])
-        after = data.get("data", {}).get("after")
-        if not after:
+        for item in items:
+            adder(item)
+        oldest = min(int(i.get("created_utc", NOW_TS)) for i in items)
+        if oldest <= CUTOFF_TS or oldest >= before:
             break
-    print(f"  [{label}] {len(rows)} unique items total")
+        before = oldest          # next page ends where this one started
+    print(f"  [{label}] +{len(rows) - start_count} new  ({len(rows)} total)")
 
 
-def scrape_post_comments(post_id: str, max_comments: int = 40):
-    """Pull top-level comments from a single post."""
-    url  = f"{BASE_URL}/comments/{post_id}.json"
-    data = get(url, {"limit": max_comments, "depth": 1, "sort": "top"})
-    if not data or len(data) < 2:
-        return
-    for child in data[1].get("data", {}).get("children", []):
-        if child.get("kind") == "t1":
-            add_comment(child["data"])
+# ── 1. ALL posts in the 6-month window ────────────────────────────────────────
+print("1. All posts (past 6 months)...")
+paginate("posts/search", add_post, "all posts", max_pages=40)
 
-
-# ── 1. Top posts past year ────────────────────────────────────────────────────
-print("1. Top posts (past year, filtering to 6 months)...")
-scrape_listing(f"{BASE_URL}/top.json", {"t": "year"}, max_pages=5, label="top")
-
-# ── 2. Hot posts ──────────────────────────────────────────────────────────────
-print("2. Hot posts...")
-scrape_listing(f"{BASE_URL}/hot.json", {}, max_pages=2, label="hot")
-
-# ── 3. Theory-flaired posts ───────────────────────────────────────────────────
-print("3. Theory-flaired posts...")
-scrape_listing(
-    f"{BASE_URL}/search.json",
-    {"q": 'flair:"Theory"', "sort": "top", "t": "year", "restrict_sr": 1},
-    max_pages=3,
-    label="flair:Theory",
-)
-
-# ── 4. Discussion-flaired posts ───────────────────────────────────────────────
-print("4. Discussion-flaired posts...")
-scrape_listing(
-    f"{BASE_URL}/search.json",
-    {"q": 'flair:"Discussion"', "sort": "top", "t": "year", "restrict_sr": 1},
-    max_pages=3,
-    label="flair:Discussion",
-)
-
-# ── 5. Comments from spoiler megathreads ──────────────────────────────────────
-print("5. Comments from spoiler megathreads...")
-mega_result = get(
-    f"{BASE_URL}/search.json",
-    {"q": "Chapter Spoilers", "sort": "new", "t": "year", "restrict_sr": 1, "limit": 50},
-)
-megathread_ids = []
-if mega_result:
-    for child in mega_result.get("data", {}).get("children", []):
-        post = child["data"]
-        if post.get("created_utc", 0) >= CUTOFF_TS:
-            megathread_ids.append(post["id"])
-
-for pid in megathread_ids[:25]:
-    scrape_post_comments(pid, max_comments=40)
-
-print(f"  [megathreads] {len(rows)} unique items total after {len(megathread_ids[:25])} threads")
-
-# ── 6. Comments from top theory posts ─────────────────────────────────────────
-print("6. Comments from top theory posts...")
-theory_result = get(
-    f"{BASE_URL}/search.json",
-    {"q": 'flair:"Theory"', "sort": "top", "t": "year", "restrict_sr": 1, "limit": 25},
-)
-theory_ids = []
-if theory_result:
-    for child in theory_result.get("data", {}).get("children", []):
-        post = child["data"]
-        if post.get("created_utc", 0) >= CUTOFF_TS:
-            theory_ids.append(post["id"])
-
-for pid in theory_ids[:15]:
-    scrape_post_comments(pid, max_comments=20)
-
-print(f"  [theory comments] {len(rows)} unique items total after {len(theory_ids[:15])} posts")
+# ── 2. ALL comments in the window — main source of 'takes' ────────────────────
+# This is the big one: comments are where grounded_theory/speculation/reaction live.
+print("2. Comments (past 6 months)... this is the largest step")
+paginate("comments/search", add_comment, "all comments", max_pages=120)
 
 # ── Save ──────────────────────────────────────────────────────────────────────
 df = pd.DataFrame(list(rows.values()))
@@ -198,11 +142,12 @@ os.makedirs("data", exist_ok=True)
 out = "data/raw_scraped.csv"
 df.to_csv(out, index=False)
 
-print(f"\nDone. {len(df)} unique examples → {out}")
+print(f"\nDone. {len(df)} unique examples -> {out}")
 print(f"\nBy source type:\n{df['source_type'].value_counts().to_string()}")
-print(f"\nBy flair (posts only):\n{df[df['source_type']=='post']['flair'].value_counts().head(10).to_string()}")
-cutoff_str = datetime.fromtimestamp(CUTOFF_TS).strftime("%Y-%m-%d")
-print(f"\nDate range (cutoff was {cutoff_str}):")
+posts = df[df['source_type'] == 'post']
+if len(posts):
+    print(f"\nTop flairs (posts only):\n{posts['flair'].value_counts().head(10).to_string()}")
+print(f"\nDate range:")
 print(f"  oldest: {datetime.fromtimestamp(df['created_utc'].min()).strftime('%Y-%m-%d')}")
 print(f"  newest: {datetime.fromtimestamp(df['created_utc'].max()).strftime('%Y-%m-%d')}")
 print(f"\nNext step: open {out} and fill in the 'label' column.")
