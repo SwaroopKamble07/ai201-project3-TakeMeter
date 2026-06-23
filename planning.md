@@ -1,151 +1,159 @@
 # TakeMeter: Planning Document
-**Community:** r/OnePiecePowerScaling on Reddit
-**Classifier goal:** Classify posts and comments in the Shanks vs. Mihawk power-scaling debate
+**Community:** r/OnePieceSpoilers on Reddit
+**Classifier goal:** Evaluate discourse quality by categorizing the type of "take" a post or comment represents
 
 ---
 
 ## Community
 
-r/OnePiecePowerScaling is a subreddit dedicated to debating the relative strength of characters in the One Piece manga. Unlike general discussion subreddits, every post here is explicitly argumentative — users stake out a position on who would win a fight or who is stronger, and defend it with evidence from the manga. The community has strict norms around citing chapters and panels; "just vibes" arguments are routinely challenged.
+r/OnePieceSpoilers is a subreddit dedicated to discussing leaked spoilers, raw scans, and summaries of the One Piece manga before the official English release drops each week. The community is highly active every Wednesday through Friday when spoilers circulate, and discourse ranges enormously in quality: some posts cite specific panel details and chapter callbacks to build a careful argument; others are pure hopium ("Zoro is definitely going to fight Saturn next chapter"); others are immediate emotional responses to a big reveal; others simply notice a visual detail or parallel without drawing any conclusion.
 
 This community is a strong fit for a classification task for three reasons:
-1. **Volume and recurrence**: The Shanks vs. Mihawk debate is one of the oldest and most active in the fandom, producing a large corpus of arguments on all sides across years of posts.
-2. **Clear debate structure**: Most posts take an explicit side or make a claim about relative power, making the label signal concrete and text-visible.
-3. **Necessary filtering**: A real classifier needs to distinguish on-topic Shanks/Mihawk debate posts from unrelated power-scaling posts — that is the `unrelated` label's job.
+1. **Volume and recurrence**: Spoiler weeks generate hundreds of comments and posts on a tight schedule, giving consistent data with similar prompts (everyone is reacting to the same chapter).
+2. **Genuine quality variance**: The same information (e.g., a leaked panel) can produce a grounded theory citing three chapters of evidence, a baseless hype prediction, an emotional outburst, or a quiet "did anyone notice this detail" — all in the same thread.
+3. **Community-legible distinctions**: Regular members of the sub actively distinguish between these types: "that's just hopium," "actually cite your evidence," "good catch" are common responses that map onto our labels.
 
 ---
 
 ## Labels
 
-### 1. `shanks_stronger`
-A post or comment arguing that Shanks is more powerful than Mihawk, or that Shanks would win in a fight against Mihawk. May cite feats, Haki portrayal, narrative position, or in-universe statements.
+### 1. `grounded_theory`
+A post or comment making a specific prediction or interpretive claim about One Piece story events, backed by explicit evidence — cited chapter numbers, specific panel details, established lore, or demonstrated narrative patterns. The argument would still hold if you stripped the emotional framing.
 
 **Example A:**
-> "Shanks has to be above Mihawk. He stopped Kaido's entire crew from advancing just by arriving — that's a level of Haki dominance we have never seen from Mihawk. Admiral-level feats at minimum, probably above."
+> "Imu is directly connected to Joy Boy. In chapter 1085, the Empty Throne room shows the same symbol that appeared on the Void Century stone in ch 395. Combine that with Imu's reaction to Luffy's laugh in 1060 and it's clear Oda is setting up a mirror relationship between them."
 
 **Example B:**
-> "The World Government fears Shanks more than any Warlord, including Mihawk. Oda has been consistent about Shanks being in a tier above the Shichibukai system."
+> "The 'D.' clan theme has consistently shown up whenever someone laughs in the face of death — Roger, Whitebeard, Luffy at Marineford, now Bonney in 1101. This is Oda telling us Bonney carries the Will of D. before he confirms it explicitly."
 
 ---
 
-### 2. `mihawk_stronger`
-A post or comment arguing that Mihawk is more powerful than Shanks, or that Mihawk would win in a fight against Shanks. May cite the World's Strongest Swordsman title, feats, or narrative evidence.
+### 2. `speculation`
+A bold or confident prediction or claim about One Piece that is stated without supporting evidence. The post asserts rather than argues. The claim may turn out to be correct, but the post provides no reasoning that would survive scrutiny.
 
 **Example A:**
-> "Mihawk holds the title of World's Strongest Swordsman and Shanks is a swordsman. That title is explicitly comparative. Oda would not give Mihawk that title if Shanks surpassed him — it would make the title meaningless."
+> "Shanks is definitely the final villain. He's been hiding something since chapter 1 and Oda always rewards patience like that."
 
 **Example B:**
-> "Mihawk cut a literal ice wave in half as a warmup at Marineford. We have never seen Shanks do anything on that scale. Mihawk's ceiling is just higher."
+> "Zoro is going to 1v1 a Gorosei this arc, calling it now. He's been underutilized for too long and Oda owes him a real fight."
 
 ---
 
-### 3. `equal`
-A post or comment arguing that Shanks and Mihawk are at the same power level, are rivals of equal strength, or that the debate is genuinely unresolvable given current evidence.
+### 3. `reaction`
+An immediate emotional or evaluative response to current spoiler content — a chapter, a leaked panel, a summary. The post expresses how the person *feels* about a reveal or moment. Little to no argument is made; the post is processing or sharing an emotional state.
 
 **Example A:**
-> "Their rivalry is explicitly described as legendary and ongoing. Oda is clearly portraying them as equals — that is the entire point of their dynamic. Trying to rank one above the other misses the narrative intention."
+> "I am NOT okay. Oda really just did that to Vegapunk. I've been staring at the panel for 10 minutes. This chapter broke me."
 
 **Example B:**
-> "Both have feats that would embarrass most of the cast. Shanks' Haki, Mihawk's swordsmanship — these are parallel peaks, not a hierarchy. They are equal and that is intentional."
+> "That Luffy panel is the most gorgeous thing Oda has ever drawn. The coloring in the raw, even without official release — peak manga."
 
 ---
 
-### 4. `unrelated`
-A post or comment that is not primarily about the Shanks vs. Mihawk matchup. May discuss other characters, other matchups, general power-scaling methodology, or One Piece lore unrelated to this debate.
+### 4. `observation`
+A post or comment that identifies a specific, verifiable detail, visual pattern, callback, or structural parallel in existing manga panels or chapters. The post points something out without making a future prediction or expressing primarily emotional content. The observation is complete in itself — it stops at noticing.
 
 **Example A:**
-> "Zoro will surpass Mihawk by the end of the series — that is his entire character arc. But where does that put him relative to current Luffy?"
+> "Did anyone catch that in the chapter 1090 spread, every Straw Hat is positioned in the same order as the crew's wanted poster from chapter 435? Even the angles match."
 
 **Example B:**
-> "Why does everyone lowball the Admirals? Aokiji froze an entire ocean. That is above anything the Yonko have shown."
+> "Oda has drawn Shanks gripping his sword with his right hand in every flashback panel. This week's raw he switched to his left. First time ever."
 
 ---
 
 ## Hard Edge Cases
 
-### Edge case 1: shanks_stronger post that acknowledges Mihawk's strength
-**Post:** "I think Shanks is stronger, but it's genuinely close. Mihawk's swordsmanship is probably better, but Shanks' Haki tips the scales."
+### Edge case 1: observation that implies a theory
+**Post:** "The shadow behind Imu on the Empty Throne in chapter 1085 has the exact same silhouette proportions as the figure from the Void Century carving in chapter 395."
 
-This post takes a clear side but acknowledges the other side. It is not `equal` because the poster commits to a ranking.
+This could be `observation` (noticing a visual detail) or `grounded_theory` (using that detail to argue Imu's identity or origin).
 
-**Decision rule:** If the post reaches a conclusion about who is stronger — even tentatively — label by that conclusion. `equal` is reserved for posts that explicitly argue the two are at the same level or that no ranking is possible. "Shanks edges Mihawk" → `shanks_stronger`.
+**Decision rule:** If the post stops at identifying the pattern — "look at this" — without making an explicit claim about what it means or predicts, label it `observation`. If the post uses the pattern as a premise for an argument ("therefore Imu is…" or "this confirms…"), label it `grounded_theory`. In the example above, the post states a parallel and nothing more → `observation`. If the same post added "which confirms Imu is the original Joy Boy's descendant," → `grounded_theory`.
 
-### Edge case 2: unrelated post that mentions both characters
-**Post:** "Shanks and Mihawk are both massively above Zoro's current level. Zoro needs at least 2 more power-ups."
+### Edge case 2: speculation with one cited fact
+**Post:** "In chapter 1100 Bonney absorbed Kuma's memories, so she's obviously going to be the one to kill Saturn. Calling it."
 
-Both characters are mentioned, but the post is not about the Shanks vs. Mihawk debate.
+One chapter citation appears, but the conclusion ("obviously," "calling it") does not follow from the cited evidence — the evidence is decorative, not load-bearing for the claim.
 
-**Decision rule:** If the post's primary argument is not about the relative strength of Shanks and Mihawk to each other, label it `unrelated`. Using Shanks and Mihawk as reference points for another argument → `unrelated`.
+**Decision rule:** If the cited evidence would genuinely support the conclusion even if you removed the opinion framing, label `grounded_theory`. If the evidence is cherry-picked or vague and the conclusion goes far beyond what it supports, label `speculation`. A single cite used to launch a leap → `speculation`.
 
-### Edge case 3: equal vs. unresolvable
-**Post:** "We literally don't have enough feats to rank these two. It's impossible to say."
+### Edge case 3: emotional reaction that contains a prediction
+**Post:** "OMG THIS CHAPTER WAS INSANE. Zoro is definitely going to beat Lucci next chapter, I can feel it!!!"
 
-**Decision rule:** If the post is still engaging with the Shanks/Mihawk matchup and framing them as peers (even implicitly), label `equal`. If the post is dismissing the debate entirely or redirecting to another topic, label `unrelated`.
+This is emotional (reaction) but also contains a future claim (speculation).
+
+**Decision rule:** Label by the *dominant intent*. If the post is primarily venting or celebrating and the prediction is incidental ("I can feel it" is not an argument), label `reaction`. If the primary structure of the post is the prediction — even if expressed excitedly — label `speculation`. The example above is primarily emotional with a throwaway prediction → `reaction`.
 
 ---
 
 ## Data Collection Plan
 
-**Source:** Posts and comments from r/OnePiecePowerScaling, collected via the Arctic Shift Reddit archive API (no credentials required).
+**Source:** Both Reddit posts and comments from r/OnePieceSpoilers, collected using the PRAW Python library (Reddit API). Posts will include title + selftext; comments will be collected from weekly spoiler megathreads and high-engagement theory posts.
 
-**Target distribution:** 100 examples per label = 400 total.
+**Target distribution:** 100 examples per label = 400 total, to give the model enough signal per class and a meaningful test set.
 
-| Label | Target count | Primary source |
-|-------|-------------|----------------|
-| shanks_stronger | 100 | Posts/comments arguing Shanks wins |
-| mihawk_stronger | 100 | Posts/comments arguing Mihawk wins |
-| equal | 100 | Posts/comments arguing equal/rival tier |
-| unrelated | 100 | Posts about other matchups/characters |
+| Label | Target count |
+|-------|-------------|
+| grounded_theory | 100 |
+| speculation | 100 |
+| reaction | 100 |
+| observation | 100 |
 
-**Split:** 320 train / 40 validation / 40 test (80/10/10).
+**Split:** 320 train / 40 validation / 40 test (80/10/10). The test set will be held out completely until final evaluation — no peeking to adjust labels or thresholds.
 
 **Collection strategy:**
-- Search posts with "Shanks" and "Mihawk" in title → debate posts
-- Scrape comments from high-engagement Shanks/Mihawk threads
-- Scrape general posts not mentioning both characters → unrelated
+- Scrape weekly "SPOILERS" megathread comments (reaction and observation labels tend to cluster here)
+- Scrape top posts of all time and past 6 months tagged "Theory" or "Discussion" (grounded_theory and speculation)
+- Filter out deleted comments, comments under 20 words (too short for a text classifier to learn from), and non-English posts
 
-**If a label is underrepresented:** `equal` posts are likely rarest — specifically search for "Shanks Mihawk equal" or "rivals" in title if short.
+**If a label is underrepresented:** If after annotation any label has fewer than 80 examples, go back and scrape specifically for that type — e.g., search for "did anyone notice" or "I just realized" for observation; search pinned "Chapter X Spoilers" posts for reactions. Do not simply downsample other labels; add more examples to the underrepresented one.
+
+**Pre-annotation read:** Before labeling, read 30–40 examples from the raw scrape to verify labels apply cleanly. If a label is consistently hard to distinguish from another in practice, revisit the decision rule before annotating all 400.
 
 ---
 
 ## Evaluation Metrics
 
 **Primary metrics:**
-- **Overall accuracy** — percentage of test examples correctly classified.
-- **Per-class F1 score** — essential because `equal` may be underrepresented and accuracy alone would hide poor performance on that class.
-- **Confusion matrix** — 4x4 table showing which label pairs are confused most.
+- **Overall accuracy** — percentage of test examples correctly classified. Required by the spec and gives a summary number for comparison.
+- **Per-class F1 score** — harmonic mean of precision and recall for each label. This is essential because the class distribution may not be perfectly balanced, and accuracy alone would hide a model that ignores the minority class.
+- **Confusion matrix** — full 4×4 table showing what the model predicts for each true label. This is where failure mode analysis starts: which pairs of labels does the model conflate most?
 
 **Why accuracy alone is insufficient:**
-If `unrelated` is easy to classify (different linguistic profile), a model could achieve high accuracy by getting `unrelated` right while failing on the three debate labels. Per-class F1 exposes this. The critical boundary is `shanks_stronger` vs. `mihawk_stronger` vs. `equal`.
+If `reaction` accounts for 40% of the test set and the model learns to predict `reaction` constantly, it achieves 40% accuracy without learning anything. Per-class F1 catches this. Additionally, not all errors are equally bad: confusing `grounded_theory` with `observation` (the model misses the predictive intent) is a different kind of failure than confusing `grounded_theory` with `speculation` (the model can't detect whether evidence is present). The confusion matrix makes these asymmetries visible.
 
-**Baseline comparison:** Zero-shot Groq llama-3.3-70b-versatile on the same test set.
+**Baseline comparison:** The same test set will be run through Groq's `llama-3.3-70b-versatile` with a zero-shot prompt that includes the four label definitions and asks for a single label per example. Both models are evaluated on the same 20 test examples so the comparison is direct.
 
 ---
 
 ## Definition of Success
 
-**Minimum acceptable:**
-- Overall accuracy >= 70%
-- Per-class F1 >= 0.60 for all four labels
-- Fine-tuned model beats zero-shot baseline by >= 10 percentage points
+A classifier is **genuinely useful** for this community if it can reliably distinguish evidence-backed posts from unsupported speculation — that is the core quality signal TakeMeter is trying to surface. Secondary to that is separating reaction and observation from theory-type posts.
 
-**Good enough for deployment:**
-- Overall accuracy >= 80%
-- `shanks_stronger` vs. `mihawk_stronger` F1 >= 0.75 (the critical distinction)
-- `equal` F1 >= 0.60 (hardest class)
+**Minimum acceptable threshold (for deployment consideration):**
+- Overall accuracy ≥ 70% on the held-out test set
+- Per-class F1 ≥ 0.60 for every label (no label is being systematically ignored)
+- Fine-tuned model outperforms the zero-shot Groq baseline by at least 10 percentage points overall accuracy
+
+**Good enough for a real community tool:**
+- Overall accuracy ≥ 80%
+- `grounded_theory` vs. `speculation` F1 ≥ 0.75 (the most important distinction for a quality meter)
+- Confusion matrix shows no single pair of labels accounts for more than 30% of all errors
+
+If the fine-tuned model does not beat the zero-shot baseline by at least 10 points, that is a meaningful negative result worth reporting — it would suggest the task may require more data, a larger base model, or a revised label taxonomy.
 
 ---
 
 ## AI Tool Plan
 
 ### Label stress-testing
-Give Claude the four label definitions and edge case rules, ask it to generate 8-10 posts that blur `shanks_stronger`/`equal` and `equal`/`mihawk_stronger`. If those cannot be cleanly labeled, tighten the equal definition.
+Before annotating 200 examples, give Claude the four label definitions plus the three edge case decision rules and ask it to generate 10–15 posts that sit at the boundary between two labels. Specifically request posts that blur `grounded_theory` / `observation` and `speculation` / `reaction` since those are the two hardest boundaries. If generated posts can't be cleanly labeled using the current decision rules, tighten the rules before committing to annotation.
 
 ### Annotation assistance
-Use Gemma 4 (via Gemini API) to pre-label all scraped candidates. Track pre-labeled rows with `annotation_source = "gemini_assisted"`. Review every label before accepting.
+Use Gemma 4 31b and GPT OSS 120b to pre-label a batch of 50 examples before reviewing them manually. Prompt: provide the four definitions and decision rules, then ask for a label and a one-sentence justification for each example. Review every pre-labeled example — accept, reject, or correct. Track which examples were pre-labeled vs. human-only in a column in the CSV (`annotation_source`: `human` or `llm_assisted`). This column will be disclosed in the README.
 
 ### Failure analysis
-After evaluation, give misclassified examples to Claude and ask it to identify patterns. Verify patterns manually before writing the report.
+After evaluation, give Claude the list of wrong predictions (true label, predicted label, post text) and ask it to identify systematic patterns — e.g., "the model always predicts speculation when the post is short" or "it can't distinguish observation from reaction when the detail noticed is about a character's appearance." Use this analysis to seed the "wrong predictions" section of the evaluation report, then verify each pattern manually by looking at the actual examples.
 
 ---
 
