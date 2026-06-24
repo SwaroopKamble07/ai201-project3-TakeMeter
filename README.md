@@ -197,3 +197,4 @@ The assignment spec helped keep the project concrete: it required a clear label 
 ## Demo Video
 
 The demo video should show 3 to 5 posts with the model's predicted label and confidence visible, then walk through one correct prediction, one incorrect prediction, and a brief evaluation summary using the confusion matrix and metric table above.
+Here is the link to the demo video with all of those specified parts that I went over: https://www.youtube.com/watch?v=bCdfnZgBErQ
