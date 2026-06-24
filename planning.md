@@ -1,158 +1,147 @@
 # TakeMeter: Planning Document
+
 **Community:** r/OnePiecePowerScaling on Reddit
-**Classifier goal:** Classify posts and comments by their position in the Shanks vs. Mihawk power-scaling debate
+**Classifier goal:** Classify One Piece power-scaling posts and comments by the type of argument they use.
 
 ---
 
 ## Community
 
-r/OnePiecePowerScaling is a subreddit dedicated to debating the relative strength of characters in the One Piece manga. Every post is explicitly argumentative — users stake out a position on who would win a fight and defend it with evidence from the manga. The community has strong norms around citing chapters and panels; unsupported claims are routinely challenged.
+r/OnePiecePowerScaling is a subreddit dedicated to debating the relative strength of One Piece characters. The community is a good fit for this task because most posts are explicitly argumentative: users compare characters, cite fights, invoke story portrayal, or make confident rankings.
 
-This community is a strong fit for a classification task for three reasons:
-1. **Clear debate structure**: Most posts take an explicit side or make a claim about relative power, making the label signal concrete and text-visible.
-2. **Recurring focal debate**: Shanks vs. Mihawk is one of the most contested matchups in the fandom — it has been actively debated for years, producing a large and varied corpus of arguments on all sides.
-3. **Necessary filtering**: A real classifier needs to distinguish on-topic Shanks/Mihawk debate posts from unrelated power-scaling posts — that is the `unrelated` label's job.
+This makes the subreddit useful for an argument-type classifier for three reasons:
+1. **Clear argumentative structure:** posts usually make a claim about who is stronger, weaker, overrated, underrated, or in the same tier.
+2. **Multiple reasoning styles:** users support claims with feats, narrative logic, titles, character portrayal, or sometimes no evidence at all.
+3. **Real boundary cases:** many posts mix evidence types, so the labels require decision rules rather than simple keyword matching.
 
 ---
 
 ## Labels
 
-### 1. `shanks_stronger`
-A post or comment arguing that Shanks is more powerful than Mihawk, or that Shanks would win in a fight against Mihawk. Includes posts framing this as "Mihawk is weaker than Shanks."
+### 1. `feat_based`
+A post or comment is `feat_based` when it supports a strength claim using concrete in-story evidence. This includes named attacks, fights shown on panel, damage dealt or taken, speed comparisons, durability feats, bounty used as a proxy for strength, or direct comparison across battles.
 
 **Example A:**
-> "Shanks stopped Kaido's entire crew from advancing just by arriving — that's a level of Haki dominance we have never seen from Mihawk. He is clearly in a tier above."
+> "Shanks blocked Akainu's attack at Marineford and stopped Greenbull with Haki from far away. Mihawk has not shown a comparable combat feat yet."
 
 **Example B:**
-> "The World Government fears Shanks more than any Warlord including Mihawk. Oda has been consistent about Shanks being above the Shichibukai system."
+> "Kaido tanked attacks from the Scabbards, Yamato, Zoro, Law, Kid, and Luffy before finally going down. His endurance feats are above Big Mom's."
 
 ---
 
-### 2. `mihawk_stronger`
-A post or comment arguing that Mihawk is more powerful than Shanks, or that Mihawk would win in a fight against Shanks. Includes posts framing this as "Shanks is weaker than Mihawk."
+### 2. `narrative_based`
+A post or comment is `narrative_based` when it argues from story role, portrayal, hierarchy, titles, symbolism, author intent, or relationships between characters rather than from direct combat evidence.
 
 **Example A:**
-> "Mihawk holds the title of World's Strongest Swordsman and Shanks is a swordsman. That title is explicitly comparative. Oda would not give Mihawk that title if Shanks surpassed him."
+> "Shanks is being saved for the final saga, so Oda is clearly portraying him as one of the highest-level pirates in the story."
 
 **Example B:**
-> "Mihawk cut a literal ice wave in half as a warmup at Marineford. We have never seen Shanks do anything on that scale."
+> "Mihawk has to remain extremely strong because Zoro's dream depends on him being a legitimate final benchmark."
 
 ---
 
-### 3. `equal`
-A post or comment arguing that Shanks and Mihawk are at the same power level, are rivals of equal strength, or that the debate is genuinely unresolvable given current evidence.
+### 3. `assertion`
+A post or comment is `assertion` when it makes a confident strength claim without giving supporting reasoning. The post may be opinionated or specific, but it does not explain the claim using feats, narrative logic, titles, or other evidence.
 
 **Example A:**
-> "Their rivalry is explicitly described as legendary and ongoing. Oda is clearly portraying them as equals — that is the entire point of their dynamic."
+> "Mihawk mid-diffs Shanks and it is not close."
 
 **Example B:**
-> "We do not have enough feats to definitively rank one above the other. They are portrayed as peers and that is intentional."
-
----
-
-### 4. `unrelated`
-A post or comment that is not primarily about the Shanks vs. Mihawk matchup. May discuss other characters, other matchups, general power-scaling methodology, or One Piece lore unrelated to this debate.
-
-**Example A:**
-> "Zoro will surpass Mihawk by the end of the series — that is his entire character arc. But where does that put him relative to current Luffy?"
-
-**Example B:**
-> "Why does everyone lowball the Admirals? Aokiji froze an entire ocean. That is above anything the Yonko have shown."
+> "Kaido clears the admirals easily."
 
 ---
 
 ## Hard Edge Cases
 
-### Edge case 1: post takes a side but acknowledges the other
-**Post:** "I think Shanks is stronger, but it is genuinely close. Mihawk's swordsmanship is probably better, but Shanks' Haki tips the scales."
+### Edge case 1: a post contains both feats and narrative framing
+**Post:** "Shanks is a Yonko and Oda clearly portrays him as a final-saga monster, but he also stopped Greenbull with Haki and one-shot Kid."
 
-This post takes a clear side but acknowledges the other. It is not `equal` because the poster commits to a conclusion.
+This post includes narrative reasoning and concrete evidence.
 
-**Decision rule:** If the post reaches a conclusion about who is stronger — even tentatively — label by that conclusion. `equal` is reserved for posts that explicitly argue the two are at the same level or that no ranking is possible. "Shanks edges Mihawk" -> `shanks_stronger`.
+**Decision rule:** If the post uses at least one concrete in-story feat as part of the argument, label it `feat_based`. The feat gives the model a more specific evidence type than general portrayal.
 
-### Edge case 2: post mentions both as reference points for another argument
-**Post:** "Shanks and Mihawk are both massively above Zoro's current level. Zoro needs at least 2 more power-ups."
+### Edge case 2: a post uses titles or hierarchy without direct feats
+**Post:** "Mihawk is the World's Strongest Swordsman, and Zoro's whole dream depends on that title meaning something."
 
-Both characters are mentioned, but the post is not about the Shanks vs. Mihawk debate.
+This post is not simply an unsupported assertion because it explains the claim through a title and narrative role.
 
-**Decision rule:** If the post's primary argument is not about the relative strength of Shanks and Mihawk to each other, label it `unrelated`. Using them as reference points for a different argument -> `unrelated`.
+**Decision rule:** Label title, hierarchy, portrayal, or author-intent arguments as `narrative_based` unless the post also cites concrete fight evidence.
 
-### Edge case 3: "impossible to say" posts
-**Post:** "We literally do not have enough feats to rank these two. It is impossible to say."
+### Edge case 3: a post sounds like a hot take but gives no support
+**Post:** "Loki power-cliffed Kaido. The old top tiers are finished."
 
-**Decision rule:** If the post is still engaging with the Shanks/Mihawk matchup and framing them as peers (even implicitly), label `equal`. If the post is dismissing the debate entirely or redirecting to another topic, label `unrelated`.
+This post makes a clear claim but does not explain why.
+
+**Decision rule:** Label confident unsupported takes as `assertion`, even if the claim is specific or controversial.
 
 ---
 
 ## Data Collection Plan
 
-**Source:** Posts and comments from r/OnePiecePowerScaling, collected via the Arctic Shift Reddit archive API (no credentials required). Scraping window: past 12 months.
+**Source:** Posts and comments from r/OnePiecePowerScaling, collected through the Arctic Shift Reddit archive API.
 
-**Target distribution:** 100 examples per label = 400 total.
+**Target distribution:** At least 200 labeled examples total, with no single label above 70% of the final dataset.
 
 | Label | Target count | Primary source |
-|-------|-------------|----------------|
-| shanks_stronger | 100 | Posts/comments arguing Shanks wins |
-| mihawk_stronger | 100 | Posts/comments arguing Mihawk wins |
-| equal | 100 | Posts/comments arguing equal/rival tier |
-| unrelated | 100 | Posts about other matchups/characters |
+|-------|--------------|----------------|
+| `feat_based` | 200+ | Posts/comments citing fights, attacks, panels, durability, speed, or other concrete evidence |
+| `narrative_based` | 200+ | Posts/comments citing story role, portrayal, hierarchy, titles, or author intent |
+| `assertion` | 200+ | Posts/comments making strength claims without supporting reasoning |
 
-**Split:** Handled automatically by Colab notebook (70/15/15).
+**Split:** Handled automatically by the Colab notebook.
 
 **Collection strategy:**
-- Scrape all posts and comments from r/OnePiecePowerScaling (past 12 months)
-- Curate: posts mentioning BOTH Shanks and Mihawk -> debate candidates (shanks_stronger / mihawk_stronger / equal)
-- Curate: posts mentioning NEITHER -> unrelated candidates
-- Pre-label with Mistral Medium 3.5; review and verify before finalizing
+- Scrape posts and comments from r/OnePiecePowerScaling.
+- Filter for substantive posts that mention common power-scaling characters.
+- Pre-label with an LLM using the project label definitions.
+- Manually review and correct labels before finalizing the dataset.
+- Use `finalize.py` to remove invalid labels and keep the label distribution balanced.
 
-**If a label is underrepresented:** `equal` posts are likely rarest. If short, re-scrape searching specifically for "rivals", "equal", or "same level" in post text.
+**If a label is underrepresented:** `feat_based` is likely to be hardest to balance because many posts mix concrete evidence with broad narrative claims. If short, prioritize longer analysis posts and comments that mention fights, named attacks, or direct battle outcomes.
 
 ---
 
 ## Evaluation Metrics
 
 **Primary metrics:**
-- **Overall accuracy** — percentage of test examples correctly classified.
-- **Per-class F1 score** — essential because `equal` may be underrepresented and accuracy alone would hide poor performance on that class.
-- **Confusion matrix** — 4x4 table showing which label pairs are confused most.
+- **Overall accuracy:** percentage of test examples correctly classified.
+- **Per-class F1 score:** required because a model could do reasonably well overall while failing on the hardest label.
+- **Confusion matrix:** shows which argument types the model confuses most.
 
 **Why accuracy alone is insufficient:**
-If `unrelated` is easy to classify (different linguistic profile — no Shanks/Mihawk comparison framing), a model could achieve high accuracy by getting `unrelated` right while failing on the three debate labels. Per-class F1 exposes this. The critical boundary is `shanks_stronger` vs. `mihawk_stronger` vs. `equal`.
+The labels are not equally difficult. `assertion` and `narrative_based` can overlap when a post gives vague story logic, and `feat_based` can be missed when a post mentions a feat briefly inside a larger opinion. Per-class F1 and the confusion matrix expose those failures better than overall accuracy alone.
 
-**Baseline comparison:** Zero-shot Groq llama-3.3-70b-versatile on the same test set.
+**Baseline comparison:** A zero-shot LLM classifier evaluated on the same test set using the same label definitions.
 
 ---
 
 ## Definition of Success
 
-**Minimum acceptable:**
-- Overall accuracy >= 70%
-- Per-class F1 >= 0.60 for all four labels
-- Fine-tuned model beats zero-shot baseline by >= 10 percentage points
+**Good enough performance:**
+- Overall accuracy >= 70%.
+- Per-class F1 >= 0.60 for all three labels.
+- Fine-tuned model beats the zero-shot baseline by >= 10 percentage points.
 
-**Good enough for deployment:**
-- Overall accuracy >= 80%
-- `shanks_stronger` vs. `mihawk_stronger` F1 >= 0.75 (the critical distinction)
-- `equal` F1 >= 0.60 (hardest class)
+This threshold is concrete enough for the assignment while still leaving room for the task's real ambiguity. A model below 70% can still show useful learning, but it should be described as not yet meeting the planned success bar.
 
 ---
 
 ## AI Tool Plan
 
 ### Label stress-testing
-Give Claude the four label definitions and edge case rules, ask it to generate 8-10 posts that blur `shanks_stronger`/`equal` and `equal`/`mihawk_stronger`. If those cannot be cleanly labeled, tighten the equal definition.
+Ask an AI assistant to generate examples that blur `feat_based` vs. `narrative_based` and `narrative_based` vs. `assertion`. Use those examples to tighten the decision rules before final annotation.
 
 ### Annotation assistance
-Use Mistral Medium 3.5 to pre-label all scraped candidates. Track pre-labeled rows with `annotation_source = "mistral_assisted"`. Review every label before accepting — especially `equal` vs. `shanks_stronger` boundary calls.
+Use an LLM to pre-label candidate posts. Track AI-assisted rows with `annotation_source`, then manually review and correct labels before accepting them into `data/labeled.csv`.
 
 ### Failure analysis
-After evaluation, give misclassified examples to Claude and ask it to identify patterns. Verify patterns manually before writing the report.
+After evaluation, inspect confusion matrix patterns and wrong predictions. Use AI assistance to suggest possible failure patterns, but verify those patterns manually against the labeled examples.
 
 ---
 
-## Stretch Features (to be planned before starting)
+## Stretch Features
 
-- [ ] **Inter-annotator reliability** — recruit one other person to label 30 examples independently; compute Cohen's kappa
-- [ ] **Confidence calibration** — plot calibration curve (confidence vs. actual accuracy) across confidence bins
-- [ ] **Error pattern analysis** — systematic characterization of failure modes beyond individual examples
-- [ ] **Deployed interface** — simple Gradio or Streamlit app that accepts a post/comment and returns label + confidence
+- [ ] Inter-annotator reliability: ask another person to label a small sample and compare agreement.
+- [ ] Confidence calibration: compare model confidence with actual correctness.
+- [ ] Error pattern analysis: group wrong predictions by boundary type.
+- [ ] Deployed interface: create a simple app that accepts a post/comment and returns label plus confidence.
