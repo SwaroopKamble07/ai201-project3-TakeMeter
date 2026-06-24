@@ -1,3 +1,4 @@
 .env
 data/raw_scraped.csv
 New_copy_of_ai201_project3_takemeter_starter_clean.ipynb
+*.mp4
