@@ -30,34 +30,31 @@ MODEL  = "openai/gpt-oss-120b"
 
 SYSTEM_PROMPT = """You are classifying posts and comments from r/OnePiecePowerScaling, a Reddit community that debates the power levels of One Piece characters.
 
-Classify each post based on its position in the Shanks vs. Mihawk debate.
+Classify each post based on the TYPE of argument it makes (not which side it takes).
 
 Assign EXACTLY ONE label:
 
-shanks_stronger — The post argues that Shanks is more powerful than Mihawk, or that Shanks would win a fight against Mihawk. Includes posts saying Mihawk is weaker than Shanks.
-Example: "Shanks stopped Kaido's crew with just his presence. His Haki alone puts him above Mihawk."
+feat_based — A strength argument supported by specific feats: named attacks shown on-panel, damage dealt or taken, speed or combat comparisons across fights, bounty used as a proxy for strength, or any concrete in-story evidence.
+Example: "Shanks blocked a blow from Akainu with one arm and stopped Kaido's advance with his Haki alone. Mihawk has never shown anything comparable."
 
-mihawk_stronger — The post argues that Mihawk is more powerful than Shanks, or that Mihawk would win a fight against Shanks. Includes posts saying Shanks is weaker than Mihawk.
-Example: "Mihawk holds the World's Strongest Swordsman title and Shanks is a swordsman. The title is explicitly comparative — Mihawk is above him."
+narrative_based — An argument rooted in narrative role rather than feats. The post infers strength from what a character symbolizes, their role in the story, titles, relationships to other characters, or how Oda portrays them.
+Example: "Shanks is a Yonko and one of the Four Emperors — Oda wouldn't write him as Mihawk's inferior. Mihawk is a Warlord; the hierarchy is clear."
 
-equal — The post argues that Shanks and Mihawk are at the same power level, are rivals of equal strength, or that the debate is genuinely unresolvable.
-Example: "Their rivalry is legendary and ongoing. Oda is clearly portraying them as equals — that's the entire point of their dynamic."
-
-unrelated — The post is not primarily about the Shanks vs. Mihawk matchup. Discusses other characters, other matchups, or general power-scaling topics.
-Example: "Zoro will surpass Mihawk eventually, but where does that put him relative to current Luffy?"
+assertion — A bold strength claim with no supporting reasoning at all. The post asserts who is stronger but provides no feats, no narrative logic, no comparison — just a confident statement.
+Example: "Mihawk mid-diffs Shanks, it's not even close."
 
 Decision rules:
-- If a post takes a clear side but acknowledges the other (e.g. "Shanks wins but it's close") → label by the conclusion reached, NOT equal
-- If a post mentions Shanks and Mihawk only as reference points for a different argument → unrelated
-- If a post says "we can't know" but is still engaging with the Shanks/Mihawk matchup → equal
+- If a post cites even one concrete feat (a named attack, an outcome of a fight, a bounty, a panel) → feat_based
+- If a post leans on titles, hierarchy, symbolism, author's intent, or "Oda wouldn't write it this way" → narrative_based
+- If a post makes a claim with zero reasoning — just a confident verdict → assertion
+- A post can feel like a hot take but still be feat_based if it backs the take with specific evidence; check before labeling assertion
 
 Respond with ONLY the label name. No explanation. No punctuation. One of:
-shanks_stronger
-mihawk_stronger
-equal
-unrelated"""
+feat_based
+narrative_based
+assertion"""
 
-LABELS   = {"shanks_stronger", "mihawk_stronger", "equal", "unrelated"}
+LABELS   = {"feat_based", "narrative_based", "assertion"}
 IN_PATH  = "data/to_annotate.csv"
 OUT_PATH = "data/prelabeled.csv"
 
@@ -108,10 +105,9 @@ for i, row in df.iterrows():
                 label = cleaned.rstrip(".,;:")
             if label not in LABELS:
                 variants = {
-                    "shanks_stronger": ["shanks_stronger", "shanks stronger", "shanks is stronger"],
-                    "mihawk_stronger": ["mihawk_stronger", "mihawk stronger", "mihawk is stronger"],
-                    "equal":           ["equal", "they are equal", "same level"],
-                    "unrelated":       ["unrelated", "not related"],
+                    "feat_based":      ["feat_based", "feat based", "based on feats"],
+                    "narrative_based": ["narrative_based", "narrative based", "narrative argument"],
+                    "assertion":       ["assertion", "just a claim", "no reasoning"],
                 }
                 for canonical, aliases in variants.items():
                     if any(a in raw for a in aliases):

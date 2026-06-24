@@ -2,8 +2,13 @@
 Takes data/prelabeled.csv (after you've reviewed and verified labels) and
 produces data/labeled.csv — the clean file to upload to Colab.
 
+Label taxonomy (argument-type classification on r/OnePiecePowerScaling):
+  - feat_based       : argument supported by specific in-story feats
+  - narrative_based  : argument from narrative role / symbolism / hierarchy
+  - assertion        : bold strength claim with no supporting reasoning
+
 Requirements:
-- You must have reviewed at least 400 rows (100 per label)
+- You must have reviewed enough rows for each label
 - 'label' column must contain only valid labels
 - No single label can exceed 70% of the dataset
 
@@ -14,8 +19,8 @@ Usage:
 import sys
 import pandas as pd
 
-LABELS   = {"shanks_stronger", "mihawk_stronger", "equal", "unrelated"}
-MIN      = 40    # absolute floor — below this the model can't learn the class
+LABELS   = {"feat_based", "narrative_based", "assertion"}
+MIN      = 30    # absolute floor — below this the model can't learn the class
 MIN_PCT  = 0.20  # every label must be at least 20% of the final dataset
 IN_PATH  = "data/prelabeled.csv"
 OUT_PATH = "data/labeled.csv"
