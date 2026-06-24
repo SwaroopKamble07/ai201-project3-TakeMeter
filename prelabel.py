@@ -1,78 +1,81 @@
 """
-Pre-labels data/to_annotate.csv using Google Gemma 4 31B via the Gemini API.
-Saves progress incrementally so it can resume if interrupted.
+Pre-labels data/to_annotate.csv using GPT OSS 120B via NVIDIA NIM.
+Saves progress every 5 rows so it can resume if interrupted.
 
 Usage:
-    pip install google-genai pandas python-dotenv
-    Paste your Gemini API key into .env as GEMINI_API_KEY
+    pip install openai python-dotenv pandas
+    Add NVIDIA_API_KEY to .env
     python prelabel.py
 
-After running: open data/prelabeled.csv, read each row, and verify the label.
-The 'llm_label' column is the model's guess. Fill 'label' with your final decision.
-Change 'reviewed' from 0 to 1 as you go so you can track progress.
-You need ~100 confirmed per label. Aim to review the 400 highest-scoring rows first.
+After running: open data/prelabeled.csv, verify labels, then run finalize.py.
 """
 
 import os
 import time
 import pandas as pd
-from google import genai
-from google.genai import types
+from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
 
-API_KEY = os.environ.get("GEMINI_API_KEY", "")
-if not API_KEY or API_KEY == "paste_your_key_here":
-    raise SystemExit("Paste your Gemini API key into .env before running.")
+API_KEY = os.environ.get("NVIDIA_API_KEY", "")
+if not API_KEY or "paste" in API_KEY:
+    raise SystemExit("Paste your NVIDIA API key into .env as NVIDIA_API_KEY before running.")
 
-client = genai.Client(api_key=API_KEY)
-MODEL  = "gemma-4-31b-it"
+client = OpenAI(
+    api_key=API_KEY,
+    base_url="https://integrate.api.nvidia.com/v1",
+)
+MODEL  = "openai/gpt-oss-120b"
 
-SYSTEM_PROMPT = """You are a precise text classifier for posts and comments from r/OnePieceSpoilers, a Reddit community for discussing One Piece manga spoilers.
+SYSTEM_PROMPT = """You are classifying posts and comments from r/OnePiecePowerScaling, a Reddit community that debates the power levels of One Piece characters.
 
-Classify each text into EXACTLY ONE of these four labels:
+Classify each post based on its position in the Shanks vs. Mihawk debate.
 
-grounded_theory — Makes a specific prediction or interpretive claim backed by explicit evidence: cited chapter numbers, specific panel details, established lore, or demonstrated narrative patterns. The argument would hold even if emotional framing were removed.
+Assign EXACTLY ONE label:
 
-speculation — A bold or confident prediction/claim stated WITHOUT supporting evidence. The post asserts rather than argues. May cite one fact decoratively, but the conclusion leaps far beyond what any evidence supports.
+shanks_stronger — The post argues that Shanks is more powerful than Mihawk, or that Shanks would win a fight against Mihawk. Includes posts saying Mihawk is weaker than Shanks.
+Example: "Shanks stopped Kaido's crew with just his presence. His Haki alone puts him above Mihawk."
 
-reaction — An immediate emotional or evaluative response to spoiler content. Expresses how the person FEELS about a reveal or moment. Little to no argument. The post is processing or sharing an emotional state.
+mihawk_stronger — The post argues that Mihawk is more powerful than Shanks, or that Mihawk would win a fight against Shanks. Includes posts saying Shanks is weaker than Mihawk.
+Example: "Mihawk holds the World's Strongest Swordsman title and Shanks is a swordsman. The title is explicitly comparative — Mihawk is above him."
 
-observation — Identifies a specific, verifiable detail, visual pattern, callback, or structural parallel in existing manga panels or chapters. Points something out without making a future prediction or expressing primarily emotional content. Stops at noticing — no claim about what it means.
+equal — The post argues that Shanks and Mihawk are at the same power level, are rivals of equal strength, or that the debate is genuinely unresolvable.
+Example: "Their rivalry is legendary and ongoing. Oda is clearly portraying them as equals — that's the entire point of their dynamic."
 
-Decision rules for hard cases:
-- If a post notices a detail AND uses it to argue a claim → grounded_theory (not observation)
-- If a post cites one chapter number but the conclusion leaps far beyond it → speculation (not grounded_theory)
-- If a post is emotional but also contains a prediction → label by DOMINANT intent (reaction if emotion dominates, speculation if prediction dominates)
+unrelated — The post is not primarily about the Shanks vs. Mihawk matchup. Discusses other characters, other matchups, or general power-scaling topics.
+Example: "Zoro will surpass Mihawk eventually, but where does that put him relative to current Luffy?"
+
+Decision rules:
+- If a post takes a clear side but acknowledges the other (e.g. "Shanks wins but it's close") → label by the conclusion reached, NOT equal
+- If a post mentions Shanks and Mihawk only as reference points for a different argument → unrelated
+- If a post says "we can't know" but is still engaging with the Shanks/Mihawk matchup → equal
 
 Respond with ONLY the label name. No explanation. No punctuation. One of:
-grounded_theory
-speculation
-reaction
-observation"""
+shanks_stronger
+mihawk_stronger
+equal
+unrelated"""
 
-LABELS = {"grounded_theory", "speculation", "reaction", "observation"}
-
+LABELS   = {"shanks_stronger", "mihawk_stronger", "equal", "unrelated"}
+IN_PATH  = "data/to_annotate.csv"
 OUT_PATH = "data/prelabeled.csv"
 
-# Load candidates
-df = pd.read_csv("data/to_annotate.csv")
+df = pd.read_csv(IN_PATH)
 
-# Resume from existing output if it exists
 if os.path.exists(OUT_PATH):
-    done = pd.read_csv(OUT_PATH)
+    done     = pd.read_csv(OUT_PATH)
+    df_ids   = set(df["id"])
     done_ids = set(done["id"])
-    print(f"Resuming: {len(done_ids)} already labeled, {len(df) - len(done_ids)} remaining.")
+    extra    = done_ids - df_ids
+    if extra:
+        print(f"Warning: {len(extra)} labeled ids not in {IN_PATH} (stale rows).")
+    done_ids = done_ids & df_ids
+    pending  = df_ids - done_ids
+    print(f"Resuming: {len(done_ids)} already labeled, {len(pending)} remaining.")
 else:
-    done = pd.DataFrame()
+    done     = pd.DataFrame()
     done_ids = set()
-    # Add output columns
-    df["llm_label"]        = ""
-    df["annotation_source"] = "llm_assisted"
-    df["label"]            = ""   # user fills this in after reviewing
-    df["reviewed"]         = 0    # user flips to 1 after reading
-    df["notes"]            = ""   # user adds notes on hard cases
 
 results = []
 errors  = 0
@@ -81,36 +84,34 @@ for i, row in df.iterrows():
     if row["id"] in done_ids:
         continue
 
-    text = str(row["text"])[:2000]   # truncate very long posts
+    text = str(row["text"])[:2000]
 
-    for attempt in range(3):
+    for attempt in range(5):
         try:
-            resp = client.models.generate_content(
+            resp = client.chat.completions.create(
                 model=MODEL,
-                contents=text,
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_PROMPT,
-                    temperature=0,
-                    max_output_tokens=1024,
-                ),
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user",   "content": text},
+                ],
+                temperature=0,
+                max_tokens=1000,
+                reasoning_effort="low",
             )
-            raw = (resp.text or "").strip().lower()
+            raw = (resp.choices[0].message.content or "").strip().lower()
             if not raw:
-                print(f"  empty response — finish_reason: {resp.candidates[0].finish_reason if resp.candidates else 'unknown'}")
-            # Normalize: strip markdown, punctuation, replace spaces with underscores
+                print(f"  empty response — finish_reason: {resp.choices[0].finish_reason}")
+
             cleaned = raw.strip("*_`#\n ").replace(" ", "_")
-            # Try first word after stripping
-            label = cleaned.split()[0].rstrip(".,;:") if cleaned.split() else ""
-            # Also try the whole cleaned string in case it's multi-word with underscores
+            label   = cleaned.split()[0].rstrip(".,;:") if cleaned.split() else ""
             if label not in LABELS:
                 label = cleaned.rstrip(".,;:")
-            # Substring search across common variants
             if label not in LABELS:
                 variants = {
-                    "grounded_theory": ["grounded_theory", "grounded theory", "groundedtheory"],
-                    "speculation":     ["speculation", "speculative"],
-                    "reaction":        ["reaction", "react"],
-                    "observation":     ["observation", "observe", "nooticing"],
+                    "shanks_stronger": ["shanks_stronger", "shanks stronger", "shanks is stronger"],
+                    "mihawk_stronger": ["mihawk_stronger", "mihawk stronger", "mihawk is stronger"],
+                    "equal":           ["equal", "they are equal", "same level"],
+                    "unrelated":       ["unrelated", "not related"],
                 }
                 for canonical, aliases in variants.items():
                     if any(a in raw for a in aliases):
@@ -119,37 +120,30 @@ for i, row in df.iterrows():
                 else:
                     label = "UNCLEAR"
                     errors += 1
-                    print(f"  UNCLEAR raw response: {repr(raw[:80])}")
+                    print(f"  UNCLEAR: {repr(raw[:80])}")
 
             out_row = row.to_dict()
             out_row["llm_label"]         = label
-            out_row["label"]             = label    # pre-filled; user verifies
-            out_row["annotation_source"] = "llm_assisted"
+            out_row["label"]             = label
+            out_row["annotation_source"] = "cerebras_assisted"
             out_row["reviewed"]          = 0
             out_row["notes"]             = ""
             results.append(out_row)
 
             n_done = len(done_ids) + len(results)
-            total  = len(df)
-            print(f"[{n_done}/{total}] {label:20s}  {text[:60].replace(chr(10), ' ')}")
-            time.sleep(0.15)   # ~6-7 req/s; Groq free tier allows ~30/min
+            print(f"[{n_done}/{len(df)}] {label:20s}  {text[:60].replace(chr(10), ' ')}")
+            time.sleep(0.2)
             break
 
         except Exception as e:
-            if "rate" in str(e).lower():
-                print(f"  rate limited, waiting 30s...")
-                time.sleep(30)
-            else:
-                print(f"  error on row {i}: {e}")
-                time.sleep(2 * (attempt + 1))
+            print(f"  error attempt {attempt+1}: {e}")
+            time.sleep(8 * (attempt + 1))
 
-    # Save every 5 rows so progress isn't lost
     if len(results) % 5 == 0 and results:
         batch = pd.DataFrame(results)
         out   = pd.concat([done, batch], ignore_index=True) if not done.empty else batch
         out.to_csv(OUT_PATH, index=False)
 
-# Final save
 if results:
     batch = pd.DataFrame(results)
     out   = pd.concat([done, batch], ignore_index=True) if not done.empty else batch
@@ -157,13 +151,8 @@ if results:
 else:
     out = done
 
-print(f"\nDone. {len(out)} rows saved to {OUT_PATH}")
-print(f"Parse errors (UNCLEAR): {errors}")
-print(f"\nLLM label distribution:")
+print(f"\nDone. {len(out)} rows -> {OUT_PATH}")
+print(f"UNCLEAR count: {errors}")
+print(f"\nLabel distribution:")
 print(out["llm_label"].value_counts().to_string())
-print(f"\nNext steps:")
-print("  1. Open data/prelabeled.csv in Excel/Sheets")
-print("  2. Read each row; change 'label' if you disagree with 'llm_label'")
-print("  3. Set 'reviewed' = 1 after reading each row")
-print("  4. Add 'notes' for any hard cases (at least 3 required for the README)")
-print("  5. When done, run: python finalize.py  (creates the final labeled CSV)")
+print(f"\nNext step: review {OUT_PATH}, then run python finalize.py")

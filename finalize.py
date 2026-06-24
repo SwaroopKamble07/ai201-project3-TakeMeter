@@ -14,7 +14,7 @@ Usage:
 import sys
 import pandas as pd
 
-LABELS   = {"grounded_theory", "speculation", "reaction", "observation"}
+LABELS   = {"shanks_stronger", "mihawk_stronger", "equal", "unrelated"}
 MIN      = 40    # absolute floor — below this the model can't learn the class
 MIN_PCT  = 0.20  # every label must be at least 20% of the final dataset
 IN_PATH  = "data/prelabeled.csv"

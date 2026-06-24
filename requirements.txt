@@ -1,5 +1,7 @@
 groq
 google-genai
+mistralai
+openai
 pandas
 requests
 python-dotenv

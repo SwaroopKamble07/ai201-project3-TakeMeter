@@ -3,7 +3,7 @@ Scrapes r/OnePieceSpoilers via Arctic Shift (a Reddit archive API).
 No API key or Reddit account needed.
 
 Strategy: Arctic Shift only sorts by date, so we paginate through the whole
-6-month window (newest-first) collecting everything, then sort by score locally.
+1-year window (newest-first) collecting everything, then sort by score locally.
 
 Usage:
     pip install requests pandas
@@ -16,12 +16,12 @@ import pandas as pd
 import os
 from datetime import datetime, timedelta, timezone
 
-SUBREDDIT  = "OnePieceSpoilers"
+SUBREDDIT  = "OnePiecePowerScaling"
 BASE       = "https://arctic-shift.photon-reddit.com/api"
 HEADERS    = {"User-Agent": "takemeter-scraper/1.0"}
-CUTOFF_TS  = int((datetime.now(timezone.utc) - timedelta(days=180)).timestamp())
+CUTOFF_TS  = int((datetime.now(timezone.utc) - timedelta(days=365)).timestamp())  # 1 year
 NOW_TS     = int(datetime.now(timezone.utc).timestamp())
-MIN_WORDS  = 20
+MIN_WORDS  = 15
 
 rows: dict[str, dict] = {}
 
@@ -97,7 +97,7 @@ def add_comment(d: dict):
 
 def paginate(endpoint: str, adder, label: str, extra: dict = {}, max_pages: int = 40):
     """
-    Walk the 6-month window newest-first. Arctic Shift sorts by created_utc,
+    Walk the 1-year window newest-first. Arctic Shift sorts by created_utc,
     so we move the `before` cursor back each page until we hit the cutoff.
     """
     before = NOW_TS
@@ -125,14 +125,14 @@ def paginate(endpoint: str, adder, label: str, extra: dict = {}, max_pages: int 
     print(f"  [{label}] +{len(rows) - start_count} new  ({len(rows)} total)")
 
 
-# ── 1. ALL posts in the 6-month window ────────────────────────────────────────
-print("1. All posts (past 6 months)...")
-paginate("posts/search", add_post, "all posts", max_pages=40)
+# ── 1. ALL posts in the 1-year window ─────────────────────────────────────────
+print("1. All posts (past year)...")
+paginate("posts/search", add_post, "all posts", max_pages=80)
 
 # ── 2. ALL comments in the window — main source of 'takes' ────────────────────
 # This is the big one: comments are where grounded_theory/speculation/reaction live.
-print("2. Comments (past 6 months)... this is the largest step")
-paginate("comments/search", add_comment, "all comments", max_pages=120)
+print("2. Comments (past year)... this is the largest step")
+paginate("comments/search", add_comment, "all comments", max_pages=240)
 
 # ── Save ──────────────────────────────────────────────────────────────────────
 df = pd.DataFrame(list(rows.values()))
